@@ -1,0 +1,7 @@
+{
+    "require": {
+        "setasign/fpdi": "^2.3",
+        "michelf/php-markdown": "^1.9",
+        "kwn/number-to-words": "^1.13"
+    }
+}
