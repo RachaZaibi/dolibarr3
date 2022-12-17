@@ -166,18 +166,19 @@ class pdf_azur extends ModelePDFPropales
 		if (empty($this->emetteur->country_code)) {
 			$this->emetteur->country_code = substr($langs->defaultlang, -2); // By default, if was not defined
 		}
+		$this->posxref = $this->marge_gauche + 1;
 
 		// Define position of columns
-		$this->posxdesc = $this->marge_gauche + 1;
+		$this->posxdesc = 29;
 		if (!empty($conf->global->PRODUCT_USE_UNITS)) {
-			$this->posxtva = 101;
+			$this->posxqty = 90;
 			$this->posxup = 118;
-			$this->posxqty = 135;
+			$this->posxtva = 135;
 			$this->posxunit = 151;
 		} else {
-			$this->posxtva = 106;
+			$this->posxqty = 95;
 			$this->posxup = 122;
-			$this->posxqty = 145;
+			$this->posxtva = 145;
 			$this->posxunit = 162;
 		}
 		$this->posxdiscount = 162;
@@ -364,10 +365,10 @@ class pdf_azur extends ModelePDFPropales
 				$pdf->SetDrawColor(128, 128, 128);
 
 				$pdf->SetTitle($outputlangs->convToOutputCharset($object->ref));
-				$pdf->SetSubject($outputlangs->transnoentities("PdfCommercialProposalTitle"));
+				$pdf->SetSubject($outputlangs->transnoentities("Devis"));
 				$pdf->SetCreator("Dolibarr ".DOL_VERSION);
 				$pdf->SetAuthor($outputlangs->convToOutputCharset($user->getFullName($outputlangs)));
-				$pdf->SetKeyWords($outputlangs->convToOutputCharset($object->ref)." ".$outputlangs->transnoentities("PdfCommercialProposalTitle")." ".$outputlangs->convToOutputCharset($object->thirdparty->name));
+				$pdf->SetKeyWords($outputlangs->convToOutputCharset($object->ref)." ".$outputlangs->transnoentities("Devis")." ".$outputlangs->convToOutputCharset($object->thirdparty->name));
 				if (!empty($conf->global->MAIN_DISABLE_PDF_COMPRESSION)) {
 					$pdf->SetCompression(false);
 				}
@@ -543,8 +544,11 @@ class pdf_azur extends ModelePDFPropales
 					$curX = $this->posxdesc - 1;
 
 					$pdf->startTransaction();
-					pdf_writelinedesc($pdf, $object, $i, $outputlangs, $this->posxpicture - $curX, 3, $curX, $curY, $hideref, $hidedesc);
-					$pageposafter = $pdf->getPage();
+					pdf_writelinedesc($pdf, $object, $i, $outputlangs, $this->posxpicture - $curX, 3, $curX, $curY, 1, $hidedesc);
+					$pdf->SetFont('','', $default_font_size - 1); // Into loop to work with multipage
+					$curX = $this->posxref-1;
+					pdf_writelineref($pdf, $object, $i, $outputlangs, $this->posxpicture - $curX - $progress_width , 3, $curX, $curY, 0,0);
+                    $pageposafter = $pdf->getPage();
 					if ($pageposafter > $pageposbefore) {	// There is a pagebreak
 						$pdf->rollbackTransaction(true);
 						$pageposafter = $pageposbefore;
@@ -597,22 +601,22 @@ class pdf_azur extends ModelePDFPropales
 
 					$pdf->SetFont('', '', $default_font_size - 1); // On repositionne la police par defaut
 
-					// VAT Rate
-					if (empty($conf->global->MAIN_GENERATE_DOCUMENTS_WITHOUT_VAT) && empty($conf->global->MAIN_GENERATE_DOCUMENTS_WITHOUT_VAT_COLUMN)) {
-						$vat_rate = pdf_getlinevatrate($object, $i, $outputlangs, $hidedetails);
-						$pdf->SetXY($this->posxtva - 5, $curY);
-						$pdf->MultiCell($this->posxup - $this->posxtva + 4, 3, $vat_rate, 0, 'R');
-					}
+					// Quantity
+					$qty = pdf_getlineqty($object, $i, $outputlangs, $hidedetails);
+					$pdf->SetXY($this->posxqty -5, $curY);
+					$pdf->MultiCell($this->posxup - $this->posxqty +4, 3, $qty, 0, 'R'); // Enough for 6 chars
+
 
 					// Unit price before discount
 					$up_excl_tax = pdf_getlineupexcltax($object, $i, $outputlangs, $hidedetails);
 					$pdf->SetXY($this->posxup, $curY);
-					$pdf->MultiCell($this->posxqty - $this->posxup - 0.8, 3, $up_excl_tax, 0, 'R', 0);
-
-					// Quantity
-					$qty = pdf_getlineqty($object, $i, $outputlangs, $hidedetails);
-					$pdf->SetXY($this->posxqty, $curY);
-					$pdf->MultiCell($this->posxunit - $this->posxqty - 0.8, 4, $qty, 0, 'R'); // Enough for 6 chars
+					$pdf->MultiCell($this->posxtva - $this->posxup - 0.8, 3, $up_excl_tax, 0, 'R', 0);
+					// VAT Rate
+					if (empty($conf->global->MAIN_GENERATE_DOCUMENTS_WITHOUT_VAT) && empty($conf->global->MAIN_GENERATE_DOCUMENTS_WITHOUT_VAT_COLUMN)) {
+						$vat_rate = pdf_getlinevatrate($object, $i, $outputlangs, $hidedetails);
+						$pdf->SetXY($this->posxtva - 5, $curY);
+						$pdf->MultiCell($this->posxunit - $this->posxtva - 0.8, 4, $vat_rate, 0, 'R');
+					}
 
 					// Unit
 					if (!empty($conf->global->PRODUCT_USE_UNITS)) {
@@ -1381,7 +1385,9 @@ class pdf_azur extends ModelePDFPropales
 
 			$pdf->SetXY($this->posxdesc - 1, $tab_top + 1);
 			$pdf->MultiCell(108, 2, $outputlangs->transnoentities("Designation"), '', 'L');
-		}
+			$pdf->SetXY ($this->posxref-1, $tab_top+1);
+			$pdf->MultiCell(50,2, $outputlangs->transnoentities(" Reference "),'', 'L');
+			$pdf->line($this->posxdesc-1, $tab_top, $this->posxdesc-1, $tab_top + $tab_height);}
 
 		if (!empty($conf->global->MAIN_GENERATE_PROPOSALS_WITH_PICTURE)) {
 			$pdf->line($this->posxpicture - 1, $tab_top, $this->posxpicture - 1, $tab_top + $tab_height);
@@ -1392,25 +1398,28 @@ class pdf_azur extends ModelePDFPropales
 		}
 
 		if (empty($conf->global->MAIN_GENERATE_DOCUMENTS_WITHOUT_VAT) && empty($conf->global->MAIN_GENERATE_DOCUMENTS_WITHOUT_VAT_COLUMN)) {
-			$pdf->line($this->posxtva - 1, $tab_top, $this->posxtva - 1, $tab_top + $tab_height);
+			$pdf->line($this->posxqty - 1, $tab_top, $this->posxqty - 1, $tab_top + $tab_height);
 			if (empty($hidetop)) {
-				// Not do -3 and +3 instead of -1 -1 to have more space for text 'Sales tax'
-				$pdf->SetXY($this->posxtva - 3, $tab_top + 1);
-				$pdf->MultiCell($this->posxup - $this->posxtva + 3, 2, $outputlangs->transnoentities("VAT"), '', 'C');
-			}
+				// $pdf->SetXY($this->posxtva - 3, $tab_top + 1);
+				// $pdf->MultiCell($this->posxup - $this->posxtva + 3, 2, $outputlangs->transnoentities("VAT"), '', 'C');
+				$pdf->SetXY($this->posxtva - 1, $tab_top + 1);
+				$pdf->MultiCell($this->posxunit - $this->posxtva - 1, 2, $outputlangs->transnoentities("VAT"), '', 'C');
+				}
 		}
 
 		$pdf->line($this->posxup - 1, $tab_top, $this->posxup - 1, $tab_top + $tab_height);
 		if (empty($hidetop)) {
 			$pdf->SetXY($this->posxup - 1, $tab_top + 1);
-			$pdf->MultiCell($this->posxqty - $this->posxup - 1, 2, $outputlangs->transnoentities("PriceUHT"), '', 'C');
+			$pdf->MultiCell($this->posxtva - $this->posxup - 1, 2, $outputlangs->transnoentities("PriceUHT"), '', 'C');
 		}
 
-		$pdf->line($this->posxqty - 1, $tab_top, $this->posxqty - 1, $tab_top + $tab_height);
+		$pdf->line($this->posxtva - 1, $tab_top, $this->posxtva - 1, $tab_top + $tab_height);
 		if (empty($hidetop)) {
-			$pdf->SetXY($this->posxqty - 1, $tab_top + 1);
-			$pdf->MultiCell($this->posxunit - $this->posxqty - 1, 2, $outputlangs->transnoentities("Qty"), '', 'C');
-		}
+			// $pdf->SetXY($this->posxqty - 1, $tab_top + 1);
+			// $pdf->MultiCell($this->posxunit - $this->posxqty - 1, 2, $outputlangs->transnoentities("Qty"), '', 'C');
+			$pdf->SetXY($this->posxqty - 3, $tab_top + 1);
+			$pdf->MultiCell($this->posxup - $this->posxqty + 3, 2, $outputlangs->transnoentities("Qty"), '', 'C');
+	}
 
 		if (!empty($conf->global->PRODUCT_USE_UNITS)) {
 			$pdf->line($this->posxunit - 1, $tab_top, $this->posxunit - 1, $tab_top + $tab_height);
@@ -1507,10 +1516,11 @@ class pdf_azur extends ModelePDFPropales
 		}
 
 		$pdf->SetFont('', 'B', $default_font_size + 3);
-		$pdf->SetXY($posx, $posy);
+		$pdf->SetXY($posx, $posy-5);
 		$pdf->SetTextColor(0, 0, 60);
-		$title = $outputlangs->transnoentities("PdfCommercialProposalTitle");
-		$title .= ' '.$outputlangs->convToOutputCharset($object->ref);
+		$title = $outputlangs->transnoentities("Devis");
+		$title .= '
+		N°:'.$outputlangs->convToOutputCharset($object->ref);
 		if ($object->statut == $object::STATUS_DRAFT) {
 			$pdf->SetTextColor(128, 0, 0);
 			$title .= ' - '.$outputlangs->transnoentities("NotValidated");
@@ -1623,7 +1633,7 @@ class pdf_azur extends ModelePDFPropales
 				$pdf->SetTextColor(0, 0, 0);
 				$pdf->SetFont('', '', $default_font_size - 2);
 				$pdf->SetXY($posx, $posy - 5);
-				$pdf->MultiCell(80, 5, $outputlangs->transnoentities("BillFrom"), 0, $ltrdirection);
+				$pdf->MultiCell(80, 5, $outputlangs->transnoentities(""), 0, $ltrdirection);
 				$pdf->SetXY($posx, $posy);
 				$pdf->SetFillColor(230, 230, 230);
 				$pdf->MultiCell(82, $hautcadre, "", 0, 'R', 1);
@@ -1694,7 +1704,7 @@ class pdf_azur extends ModelePDFPropales
 			// Show recipient information
 			$pdf->SetFont('', '', $default_font_size - 1);
 			$pdf->SetXY($posx + 2, $posy);
-			$pdf->MultiCell($widthrecbox, 4, $carac_client, 0, $ltrdirection);
+			$pdf->MultiCell($widthrecbox - 2, 4, $carac_client."\nTél.: ".$object->thirdparty->phone, 0, $ltrdirection);
 		}
 
 		$pdf->SetTextColor(0, 0, 0);
