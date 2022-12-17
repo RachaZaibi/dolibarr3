@@ -1674,6 +1674,7 @@ function pdf_getlineref($object, $i, $outputlangs, $hidedetails = 0)
 		$result .= $hookmanager->resPrint;
 	}
 	if (empty($reshook)) {
+		// ref is here
 		$result .= dol_htmlentitiesbr($object->lines[$i]->product_ref);
 	}
 	return $result;
