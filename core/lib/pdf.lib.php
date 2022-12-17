@@ -1671,11 +1671,11 @@ function pdf_getlineref($object, $i, $outputlangs, $hidedetails = 0)
 		$parameters = array('i'=>$i, 'outputlangs'=>$outputlangs, 'hidedetails'=>$hidedetails, 'special_code'=>$special_code);
 		$action = '';
 		$reshook = $hookmanager->executeHooks('pdf_getlineref', $parameters, $object, $action); // Note that $action and $object may have been modified by some hooks
-		$result .= $hookmanager->resPrint;
+	//	$result .= $hookmanager->resPrint;
 	}
 	if (empty($reshook)) {
 		// ref is here
-		$result .= dol_htmlentitiesbr($object->lines[$i]->product_ref);
+		// $result .= dol_htmlentitiesbr($object->lines[$i]->product_ref);
 	}
 	return $result;
 }
